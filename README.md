@@ -12,17 +12,8 @@ Admins ingest documents. Users ask questions. The system retrieves the most rele
 
 Traditional chatbots rely solely on model training data. IntelliVault connects a large language model to **your** documents through vector search, so answers reflect your actual knowledge base—not generic internet knowledge.
 
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  PDF Upload │────▶│  Chunk +     │────▶│  Neon Postgres  │
-│  (Admin)    │     │  Embed       │     │  + pgvector     │
-└─────────────┘     └──────────────┘     └────────┬────────┘
-                                                  │
-┌─────────────┐     ┌──────────────┐              │ cosine
-│  User Chat  │────▶│  LLM + Tool  │◀─────────────┘ similarity
-│  Interface  │     │  (Groq)      │         search
-└─────────────┘     └──────────────┘
-```
+![Architecture Mind Map](/images/mindmap.png)
+
 
 ---
 
