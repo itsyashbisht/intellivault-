@@ -2,17 +2,21 @@
 
 **Intelligent document search and chat, powered by RAG.**
 
-IntelliVault is a production-ready Retrieval-Augmented Generation (RAG) application that lets organizations upload PDF documents into a searchable knowledge vault and chat with an AI assistant that answers questions grounded in that content.
+IntelliVault is a production-ready Retrieval-Augmented Generation (RAG) application that lets organizations upload PDF
+documents into a searchable knowledge vault and chat with an AI assistant that answers questions grounded in that
+content.
 
-Admins ingest documents. Users ask questions. The system retrieves the most relevant passages and generates accurate, context-aware responses.
+Admins ingest documents. Users ask questions. The system retrieves the most relevant passages and generates accurate,
+context-aware responses.
 
 ---
 
 ## Overview
 
-Traditional chatbots rely solely on model training data. IntelliVault connects a large language model to **your** documents through vector search, so answers reflect your actual knowledge base—not generic internet knowledge.
+Traditional chatbots rely solely on model training data. IntelliVault connects a large language model to **your**
+documents through vector search, so answers reflect your actual knowledge base—not generic internet knowledge.
 
-![Architecture Mind Map](/images/mindmap.png)
+![Architecture Mind Map](/public/images/mindmap.png)
 
 
 ---
@@ -30,19 +34,19 @@ Traditional chatbots rely solely on model training data. IntelliVault connects a
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | [Next.js 16](https://nextjs.org) (App Router) |
-| Language | TypeScript |
-| Auth | [Clerk](https://clerk.com) |
-| Database | [Neon](https://neon.tech) (PostgreSQL) |
-| Vector search | [pgvector](https://github.com/pgvector/pgvector) |
-| ORM | [Drizzle ORM](https://orm.drizzle.team) |
-| Embeddings | Google Gemini (`gemini-embedding-001`) |
-| LLM | Groq (`meta-llama/llama-4-scout-17b-16e-instruct`) |
-| AI SDK | [Vercel AI SDK](https://sdk.vercel.ai) |
-| PDF parsing | [unpdf](https://github.com/unjs/unpdf) |
-| Styling | Tailwind CSS 4, shadcn/ui |
+| Layer         | Technology                                         |
+|---------------|----------------------------------------------------|
+| Framework     | [Next.js 16](https://nextjs.org) (App Router)      |
+| Language      | TypeScript                                         |
+| Auth          | [Clerk](https://clerk.com)                         |
+| Database      | [Neon](https://neon.tech) (PostgreSQL)             |
+| Vector search | [pgvector](https://github.com/pgvector/pgvector)   |
+| ORM           | [Drizzle ORM](https://orm.drizzle.team)            |
+| Embeddings    | Google Gemini (`gemini-embedding-001`)             |
+| LLM           | Groq (`meta-llama/llama-4-scout-17b-16e-instruct`) |
+| AI SDK        | [Vercel AI SDK](https://sdk.vercel.ai)             |
+| PDF parsing   | [unpdf](https://github.com/unjs/unpdf)             |
+| Styling       | Tailwind CSS 4, shadcn/ui                          |
 
 ---
 
@@ -110,7 +114,8 @@ npx drizzle-kit generate
 npx drizzle-kit migrate
 ```
 
-The initial migration enables the `vector` extension and creates the `documents` table with an HNSW index for fast similarity search.
+The initial migration enables the `vector` extension and creates the `documents` table with an HNSW index for fast
+similarity search.
 
 ### 4. Configure admin access
 
@@ -174,12 +179,12 @@ src/
 
 ## Routes & Access Control
 
-| Route | Access |
-|-------|--------|
-| `/` | Public |
-| `/chat` | Authenticated users |
-| `/upload` | Admin only (`metadata.role === "admin"`) |
-| `/api/chat` | Authenticated users |
+| Route       | Access                                   |
+|-------------|------------------------------------------|
+| `/`         | Public                                   |
+| `/chat`     | Authenticated users                      |
+| `/upload`   | Admin only (`metadata.role === "admin"`) |
+| `/api/chat` | Authenticated users                      |
 
 Route protection is handled in `src/proxy.ts` using Clerk middleware.
 
@@ -187,30 +192,31 @@ Route protection is handled in `src/proxy.ts` using Clerk middleware.
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run Biome linter |
-| `npm run format` | Format code with Biome |
+| Command                    | Description                         |
+|----------------------------|-------------------------------------|
+| `npm run dev`              | Start development server            |
+| `npm run build`            | Production build                    |
+| `npm run start`            | Start production server             |
+| `npm run lint`             | Run Biome linter                    |
+| `npm run format`           | Format code with Biome              |
 | `npx drizzle-kit generate` | Generate SQL migrations from schema |
-| `npx drizzle-kit migrate` | Apply migrations to Neon |
+| `npx drizzle-kit migrate`  | Apply migrations to Neon            |
 
 ---
 
 ## Database Schema
 
 ```sql
-CREATE TABLE documents (
-  id        SERIAL PRIMARY KEY,
-  content   TEXT NOT NULL,
-  embedding VECTOR(1536)
+CREATE TABLE documents
+(
+    id        SERIAL PRIMARY KEY,
+    content   TEXT NOT NULL,
+    embedding VECTOR(1536)
 );
 
 CREATE INDEX embeddingIndex
-  ON documents
-  USING hnsw (embedding vector_cosine_ops);
+    ON documents
+    USING hnsw (embedding vector_cosine_ops);
 ```
 
 Each row represents one text chunk from an uploaded PDF, with its corresponding embedding vector for semantic search.
