@@ -182,7 +182,8 @@ src/
 ├── lib/
 │   ├── chunking.ts               # LangChain text splitter
 │   ├── db-config.ts              # Neon + Drizzle ORM client
-│   ├── db-schema.ts              # documents table schema
+│   ├── db-schema.ts              # legacy documents table schema
+├── schema/                       # Drizzle workspace and RAG table schemas
 │   ├── embedding.ts              # Gemini embedding generation
 │   ├── search.ts                 # Vector cosine similarity search
 │   └── utils.ts                  # Utility functions
