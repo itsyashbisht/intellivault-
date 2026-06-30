@@ -1,9 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db-config";
 import { workspaceMembers, workspaces } from "@/schema";
-import { eq } from "drizzle-orm";
 
 const createWorkspaceSchema = z.object({
   name: z
@@ -13,7 +13,7 @@ const createWorkspaceSchema = z.object({
     .trim(),
 });
 
-function generateSlug(name: string): string {
+export function generateSlug(name: string): string {
   return name
     .toLowerCase()
     .trim()
@@ -23,7 +23,7 @@ function generateSlug(name: string): string {
     .slice(0, 100);
 }
 
-function generateUniqueSlug(base: string): string {
+export function generateUniqueSlug(base: string): string {
   const suffix = Math.random().toString(36).slice(2, 6);
   return `${base}-${suffix}`;
 }
