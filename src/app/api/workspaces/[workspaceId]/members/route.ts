@@ -1,21 +1,20 @@
+import { auth } from "@clerk/nextjs/server";
+import { and, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/db-config";
+import { workspaceMembers } from "@/schema";
+
+export const workspaceRoleSchema = z.enum(["owner", "editor", "viewer"]);
+
 /*
 -> get allMembers
 1. auth -check + validation
 2. get workspace-id from params + validate
 3. db query -> in workspace member -> select members from workspace members and
 4. handler errors and use try catch
-5. return response. 
+5. return response.
 * */
-
-import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/db-config";
-import { workspaceMembers } from "@/schema";
-import { and, eq } from "drizzle-orm";
-import { z } from "zod";
-
-export const workspaceRoleSchema = z.enum(["owner", "editor", "viewer"]);
-
 export async function GET(
   _request: Request,
   {
@@ -303,6 +302,195 @@ export async function PATCH(
         message: "Internal server error",
       },
       { status: 500 },
+    );
+  }
+}
+
+/*
+To delete a member from a workspace ->
+(memberId, workspaceId, userId)
+1. Get memberId, workspaceId + auth check(userId).
+2. Validate all these.
+3. check whether the targeted member is a member of workspace or not ?
+4. check ownership with userId for that workspace
+5. Apply business rules :-
+    - Don't remove yourself.
+    - Don't remove another owner (this rule is particularly for my app).
+6. Then delete that member from workspaceMembers.
+7. Error handling
+8. Return proper response.
+ */
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ workspaceId: string }> },
+) {
+  try {
+    const { workspaceId } = await params;
+    const { userId } = await auth();
+    const { memberId } = await req.json();
+
+    // Authentication
+    if (!userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    // Validation
+    if (!workspaceId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Workspace ID is required.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    if (!memberId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Member ID is required.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    // Prevent self removal
+    if (memberId === userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "You cannot remove yourself from the workspace.",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+
+    // Verify the target member exists
+    const targetMember = await db
+      .select({
+        id: workspaceMembers.id,
+        role: workspaceMembers.role,
+      })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, memberId),
+        ),
+      )
+      .limit(1);
+
+    if (targetMember.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Member not found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    // Verify requester is the owner
+    const ownerMembership = await db
+      .select({
+        role: workspaceMembers.role,
+      })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, userId),
+          eq(workspaceMembers.role, "owner"),
+        ),
+      )
+      .limit(1);
+
+    if (ownerMembership.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Forbidden.",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+
+    // Prevent deleting another owner
+    if (targetMember[0].role === "owner") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "You cannot remove another owner from this workspace.",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+
+    // Delete member
+    const [deletedMember] = await db
+      .delete(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, memberId),
+        ),
+      )
+      .returning();
+
+    if (!deletedMember) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Failed to remove member.",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Member removed successfully.",
+        data: deletedMember,
+      },
+      {
+        status: 200,
+      },
+    );
+  } catch (error) {
+    console.error(`[DELETE /api/workspaces/[workspaceId]/members ]`, error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error.",
+      },
+      {
+        status: 500,
+      },
     );
   }
 }
