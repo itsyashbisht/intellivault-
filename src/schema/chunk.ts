@@ -8,10 +8,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { documents } from "./document";
 
-// One document → many chunks.
-// Each chunk has its own embedding vector.
-// Gemini text-embedding-004 = 768 dimensions.
-
 export const chunks = pgTable(
   "chunks",
   {
