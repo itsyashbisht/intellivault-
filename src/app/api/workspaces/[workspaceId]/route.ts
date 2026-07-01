@@ -242,3 +242,104 @@ export async function PATCH(
     );
   }
 }
+
+/*
+ --> Delete workspace
+1. Auth check — get userId
+2. Get workspaceId from params
+3. Check requester is owner — strictest check in your whole app
+4. Delete the workspace row
+5. Cascade deletes everything else automatically
+6. Return success
+* */
+export async function DELETE({
+  params,
+}: {
+  params: Promise<{ workspaceId: string }>;
+}) {
+  try {
+    // Authentication.
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    // Validation.
+    const { workspaceId } = await params;
+    if (!workspaceId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Workspace id required.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const owner = await db.query.workspaceMembers.findFirst({
+      where: and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, userId),
+        eq(workspaceMembers.role, "owner"),
+      ),
+    });
+
+    if (!owner) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Forbidden",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+
+    // Deleting workspace
+    const [deletedWorkspace] = await db
+      .delete(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .returning();
+
+    if (!deletedWorkspace) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Workspace not found",
+        },
+        { status: 404 },
+      );
+    }
+
+    // Final response
+    return NextResponse.json(
+      {
+        success: true,
+        message: `${deletedWorkspace.name} has been deleted successfully.`,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.error("[DELETE /api/[workspaceId] ]", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal Server Error",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
